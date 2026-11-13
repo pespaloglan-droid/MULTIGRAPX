@@ -1,0 +1,38 @@
+name: Build MultiGrapx APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install SDK
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Build and lint
+        run: gradle --no-daemon :app:assembleDebug :app:lintDebug
+      - name: Name APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk MultiGrapx-1.0.0-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MultiGrapx-APK
+          path: MultiGrapx-1.0.0-debug.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-lint-report
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
