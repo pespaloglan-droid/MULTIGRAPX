@@ -45,7 +45,21 @@ public final class MainActivity extends Activity {
   favorites=new HashSet<>(getPreferences(0).getStringSet("favorites",new HashSet<>()));
   try(InputStream in=getAssets().open("catalog.json")){JSONArray arr=new JSONArray(new String(readBytes(in),StandardCharsets.UTF_8));for(int i=0;i<arr.length();i++)all.add(arr.getJSONObject(i));}
   catch(Exception e){new AlertDialog.Builder(this).setMessage("Katalog okunamadı. Uygulamayı yeniden yükleyin.").setPositiveButton("Kapat",(d,w)->finish()).show();return;}
+  if(state!=null){
+   tab=state.getString("tab",tab);
+   category=state.getString("category",category);
+   query=state.getString("query",query);
+   String selectedId=state.getString("selectedId");
+   if(selectedId!=null)for(JSONObject item:all)if(selectedId.equals(str(item,"id"))){detail(item);return;}
+  }
   home();
+ }
+ @Override protected void onSaveInstanceState(Bundle state){
+  super.onSaveInstanceState(state);
+  state.putString("tab",tab);
+  state.putString("category",category);
+  state.putString("query",query);
+  if(selected!=null)state.putString("selectedId",str(selected,"id"));
  }
  private void shell(){root=column();root.setBackgroundColor(BG);root.setPadding(dp(20),0,dp(20),0);setContentView(root);
   root.setOnApplyWindowInsetsListener((v,i)->{android.graphics.Insets s=i.getInsets(android.view.WindowInsets.Type.systemBars()|android.view.WindowInsets.Type.displayCutout());v.setPadding(dp(20)+s.left,s.top,dp(20)+s.right,s.bottom);return i;});root.requestApplyInsets();}
@@ -54,8 +68,8 @@ public final class MainActivity extends Activity {
   LinearLayout tabs=new LinearLayout(this);for(String name:new String[]{"Duvar Kâğıtları","Görseller","Favoriler"}){Button b=button(name,()->{tab=name;category="Tümü";query="";home();});if(tab.equals(name))b.setTextColor(Color.WHITE);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(46),1);lp.setMargins(0,dp(8),dp(5),dp(8));tabs.addView(b,lp);}root.addView(tabs);
   ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout body=column();scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
   if(!tab.equals("Favoriler")){TextView headline=text(tab.equals("Görseller")?"Bir görsel. Bin his.":"Ekranın, senin dünyan.",28,Color.WHITE);headline.setTypeface(Typeface.DEFAULT,Typeface.BOLD);body.addView(headline);body.addView(text("4K & 8K • Çevrimdışı koleksiyon • Ücretsiz indirme",12,MUTED));}
-  EditText search=new EditText(this);search.setSingleLine(true);search.setTextColor(Color.WHITE);search.setHintTextColor(MUTED);search.setTextSize(14);search.setHint("Başlık veya kategori ara");search.setBackground(shape(Color.rgb(22,22,26),12));search.setPadding(dp(12),0,dp(12),0);LinearLayout.LayoutParams sl=new LinearLayout.LayoutParams(-1,dp(48));sl.setMargins(0,dp(12),0,dp(10));body.addView(search,sl);
-  HorizontalScrollView chips=new HorizontalScrollView(this);chips.setHorizontalScrollBarEnabled(false);LinearLayout row=new LinearLayout(this);chips.addView(row);for(String cat:new String[]{"Tümü","Money","Love","Luxury Life","Black","Lonely"}){Button b=button(cat,()->{category=cat;renderGrid();for(int j=0;j<row.getChildCount();j++)((Button)row.getChildAt(j)).setTextColor(((Button)row.getChildAt(j)).getText().toString().equals(category)?Color.WHITE:GOLD);});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(42));lp.setMargins(0,0,dp(7),0);row.addView(b,lp);}body.addView(chips);space(body,12);
+  EditText search=new EditText(this);search.setSingleLine(true);search.setTextColor(Color.WHITE);search.setHintTextColor(MUTED);search.setTextSize(14);search.setHint("Başlık veya kategori ara");search.setText(query);search.setBackground(shape(Color.rgb(22,22,26),12));search.setPadding(dp(12),0,dp(12),0);LinearLayout.LayoutParams sl=new LinearLayout.LayoutParams(-1,dp(48));sl.setMargins(0,dp(12),0,dp(10));body.addView(search,sl);
+  HorizontalScrollView chips=new HorizontalScrollView(this);chips.setHorizontalScrollBarEnabled(false);LinearLayout row=new LinearLayout(this);chips.addView(row);for(String cat:new String[]{"Tümü","Money","Love","Luxury Life","Black","Lonely"}){Button b=button(cat,()->{category=cat;renderGrid();for(int j=0;j<row.getChildCount();j++)((Button)row.getChildAt(j)).setTextColor(((Button)row.getChildAt(j)).getText().toString().equals(category)?Color.WHITE:GOLD);});if(cat.equals(category))b.setTextColor(Color.WHITE);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,dp(42));lp.setMargins(0,0,dp(7),0);row.addView(b,lp);}body.addView(chips);space(body,12);
   grid=column();body.addView(grid);renderGrid();search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){query=s.toString();renderGrid();}public void afterTextChanged(android.text.Editable e){}});
   Button info=button("Koleksiyon ve gizlilik",()->new AlertDialog.Builder(this).setTitle("MultiGrapx · Black Edition").setMessage("10 özgün, prosedürel dijital sanat eseri.\n\n8K: 4320 × 7680 piksel\n4K: 2160 × 3840 piksel\n\nGörseller algoritmik olarak tam 8K boyutunda çizilmiştir; fotoğraf veya yapay zekâ çıktısı değildir. Promptlar tasarım betimleridir, birebir yeniden üretim garantisi vermez.\n\nHesap, reklam, takip ve internet bağlantısı yoktur. Favoriler cihazda saklanır. İndirilen görseller Galeri / Pictures / MultiGrapx içinde kalır.\n\nDuvar kâğıdı uygulanırken 4K örnek kullanılır; cihaz ekranına göre kırpılabilir. İçerik kullanımı için LICENSE-CONTENT.txt dosyasına bakın.").setPositiveButton("Tamam",null).show());root.addView(info,new LinearLayout.LayoutParams(-1,dp(42)));space(root,8);
  }
@@ -64,7 +78,7 @@ public final class MainActivity extends Activity {
    ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.CENTER_CROP);try(InputStream in=getAssets().open("thumb/"+id+".jpg")){image.setImageBitmap(BitmapFactory.decodeStream(in));}catch(Exception ignored){}card.addView(image,new LinearLayout.LayoutParams(-1,dp(235)));card.addView(text(str(a,"category").toUpperCase(Locale.ROOT)+"  /  8K",9,GOLD));card.addView(text(str(a,"title"),14,Color.WHITE));card.setContentDescription(str(a,"title")+", "+str(a,"category"));card.setOnClickListener(v->detail(a));count++;
   }if(count==0)grid.addView(text("Henüz görsel yok. Başka bir kategori veya arama deneyin.",15,MUTED));else if(count%2==1)row.addView(new View(this),new LinearLayout.LayoutParams(0,1,1));}
  private void detail(JSONObject a){selected=a;shell();ScrollView sc=new ScrollView(this);LinearLayout body=column();sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,-1));body.addView(button("‹ Koleksiyona dön",()->home()));
-  ImageView image=new ImageView(this);image.setScaleType(ImageView.ScaleType.FIT_CENTER);try(InputStream in=getAssets().open("art/"+str(a,"id")+".jpg")){BitmapFactory.Options op=new BitmapFactory.Options();op.inSampleSize=8;image.setImageBitmap(BitmapFactory.decodeStream(in,null,op));}catch(Exception ignored){}body.addView(image,new LinearLayout.LayoutParams(-1,dp(380)));
+  ImageView image=new ImageView(this);image.setContentDescription(str(a,"title")+", "+str(a,"category"));image.setScaleType(ImageView.ScaleType.FIT_CENTER);try(InputStream in=getAssets().open("art/"+str(a,"id")+".jpg")){BitmapFactory.Options op=new BitmapFactory.Options();op.inSampleSize=8;image.setImageBitmap(BitmapFactory.decodeStream(in,null,op));}catch(Exception ignored){}body.addView(image,new LinearLayout.LayoutParams(-1,dp(380)));
   body.addView(text(str(a,"category").toUpperCase(Locale.ROOT)+"  /  ORIGINAL",11,GOLD));body.addView(text(str(a,"title"),28,Color.WHITE));body.addView(text("8K · 4320 × 7680   |   4K · 2160 × 3840",12,MUTED));
   Button fav=button(favorites.contains(str(a,"id"))?"♥ Favorilerden çıkar":"♡ Favorilere ekle",()->{String id=str(a,"id");if(!favorites.add(id))favorites.remove(id);getPreferences(0).edit().putStringSet("favorites",new HashSet<>(favorites)).apply();detail(a);});body.addView(fav);space(body,8);
   body.addView(button("İndir · 4K / 8K",()->new AlertDialog.Builder(this).setTitle("İndirme kalitesi").setItems(new String[]{"4K · 2160 × 3840","8K · 4320 × 7680"},(d,w)->start(()->save(a,w==0?4:8))).show()));space(body,8);
